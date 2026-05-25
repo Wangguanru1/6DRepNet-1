@@ -18,10 +18,7 @@ import torch.nn.functional as F
 import torchvision
 from torchvision import transforms
 from face_detection import RetinaFace
-import matplotlib
-from matplotlib import pyplot as plt
 from PIL import Image
-matplotlib.use('TkAgg')
 
 from model import SixDRepNet
 import utils
@@ -42,6 +39,9 @@ def parse_args():
     parser.add_argument('--snapshot',
                         dest='snapshot', help='Name of model snapshot.',
                         default='', type=str)
+    parser.add_argument('--output',
+                        dest='output', help='Output video filename saved in the current directory.',
+                        default='result.mp4', type=str)
     parser.add_argument('--save_viz',
                         dest='save_viz', help='Save images with pose cube.',
                         default=False, type=bool)
@@ -65,6 +65,7 @@ if __name__ == '__main__':
         device = torch.device('cuda:%d' % gpu)
     video_path = args.video_path
     cam = args.cam_id
+    output_path = os.path.join(os.getcwd(), os.path.basename(args.output))
     snapshot_path = args.snapshot
     model = SixDRepNet(backbone_name='RepVGG-B1g2',
                        backbone_file='',
@@ -95,11 +96,23 @@ if __name__ == '__main__':
     if not cap.isOpened():
         raise IOError("Cannot open video source: %s" % input_source)
 
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        fps = 30.0
+    writer = None
+
     with torch.no_grad():
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
+
+            if writer is None:
+                height, width = frame.shape[:2]
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                if not writer.isOpened():
+                    raise IOError("Cannot open output video: %s" % output_path)
 
             faces = detector(frame)
 
@@ -127,10 +140,6 @@ if __name__ == '__main__':
 
                 img = torch.Tensor(img[None, :]).to(device)
 
-                c = cv2.waitKey(1)
-                if c == 27:
-                    break
-
                 start = time.time()
                 R_pred = model(img)
                 end = time.time()
@@ -146,5 +155,9 @@ if __name__ == '__main__':
                 utils.plot_pose_cube(frame,  y_pred_deg, p_pred_deg, r_pred_deg, x_min + int(.5*(
                     x_max-x_min)), y_min + int(.5*(y_max-y_min)), size=bbox_width)
 
-            cv2.imshow("Demo", frame)
-            cv2.waitKey(5)
+            writer.write(frame)
+
+    cap.release()
+    if writer is not None:
+        writer.release()
+    print('Saved result video to %s' % output_path)

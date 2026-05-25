@@ -115,6 +115,7 @@ if __name__ == '__main__':
                     raise IOError("Cannot open output video: %s" % output_path)
 
             faces = detector(frame)
+            pose_texts = []
 
             for box, landmarks, score in faces:
 
@@ -150,10 +151,21 @@ if __name__ == '__main__':
                 p_pred_deg = euler[:, 0].cpu()
                 y_pred_deg = euler[:, 1].cpu()
                 r_pred_deg = euler[:, 2].cpu()
+                pose_texts.append('Pitch: %.1f  Yaw: %.1f  Roll: %.1f' % (
+                    p_pred_deg.item(), y_pred_deg.item(), r_pred_deg.item()))
 
                 #utils.draw_axis(frame, y_pred_deg, p_pred_deg, r_pred_deg, left+int(.5*(right-left)), top, size=100)
                 utils.plot_pose_cube(frame,  y_pred_deg, p_pred_deg, r_pred_deg, x_min + int(.5*(
                     x_max-x_min)), y_min + int(.5*(y_max-y_min)), size=bbox_width)
+
+            line_height = 26
+            start_y = frame.shape[0] - 12 - line_height * (len(pose_texts) - 1)
+            for i, text in enumerate(pose_texts):
+                position = (12, start_y + i * line_height)
+                cv2.putText(frame, text, position, cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7, (0, 0, 0), 4, cv2.LINE_AA)
+                cv2.putText(frame, text, position, cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7, (255, 255, 255), 2, cv2.LINE_AA)
 
             writer.write(frame)
 

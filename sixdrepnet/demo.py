@@ -36,6 +36,9 @@ def parse_args():
     parser.add_argument('--cam',
                         dest='cam_id', help='Camera device id to use [0]',
                         default=0, type=int)
+    parser.add_argument('--video',
+                        dest='video_path', help='Path to a video file to use instead of a camera.',
+                        default='', type=str)
     parser.add_argument('--snapshot',
                         dest='snapshot', help='Name of model snapshot.',
                         default='', type=str)
@@ -60,6 +63,7 @@ if __name__ == '__main__':
         device = torch.device('cpu')
     else:
         device = torch.device('cuda:%d' % gpu)
+    video_path = args.video_path
     cam = args.cam_id
     snapshot_path = args.snapshot
     model = SixDRepNet(backbone_name='RepVGG-B1g2',
@@ -84,15 +88,18 @@ if __name__ == '__main__':
     # Test the Model
     model.eval()  # Change model to 'eval' mode (BN uses moving mean/var).
 
-    cap = cv2.VideoCapture(cam)
+    input_source = video_path if video_path else cam
+    cap = cv2.VideoCapture(input_source)
 
-    # Check if the webcam is opened correctly
+    # Check if the video source is opened correctly
     if not cap.isOpened():
-        raise IOError("Cannot open webcam")
+        raise IOError("Cannot open video source: %s" % input_source)
 
     with torch.no_grad():
         while True:
             ret, frame = cap.read()
+            if not ret:
+                break
 
             faces = detector(frame)
 

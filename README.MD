@@ -150,6 +150,13 @@ python ./sixdrepnet/demo.py  --snapshot 6DRepNet_300W_LP_AFLW2000.pth \
                              --cam 0
 ```
 
+##  **Video Demo**:
+
+```sh
+python ./sixdrepnet/demo.py  --snapshot 6DRepNet_300W_LP_AFLW2000.pth \
+                             --video path/to/input.mp4
+```
+
 
 ___
 
@@ -207,5 +214,4 @@ model = SixDRepNet(backbone_name='RepVGG-B1g2',
                     deploy=True,
                     pretrained=False)
 ```
-
 
